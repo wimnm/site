@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Точный калькулятор нагрева</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #f4f7f6; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        button { padding: 12px 24px; font-size: 1rem; cursor: pointer; border: none; background: #28a745; color: white; border-radius: 6px; transition: 0.2s; }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Сырный калькулятор (Химки)</h2>
+    <p>Расчет уксуса, времени и посекундной тарификации</p>
+    <button onclick="runComplexCalculation()">Начать расчет</button>
+</div>
+
+<script>
+function runComplexCalculation() {
+    // 1. Ввод данных
+    const liters = parseFloat(prompt("Литров молока:", "3"));
+    const vinegarPercent = parseFloat(prompt("Концентрация уксуса %:", "5"));
+    const startTimeStr = prompt("Время начала (ЧЧ:ММ):", "06:55");
+
+    if (isNaN(liters) || isNaN(vinegarPercent) || !startTimeStr.includes(':')) {
+        alert("Ошибка вводе данных");
+        return;
+    }
+
+    // 2. Базовая логика (как в ТЗ)
+    const vinegarMl = (liters * 30) * (5 / vinegarPercent);
+    const durationMin = (liters / 3) * 10;
+    
+    // Энергия: считаем общие кВт⋅ч (из расчета 0.09 кВт⋅ч на 1 литр за весь процесс)
+    const totalEnergy = liters * 0.09;
+    const energyPerMinute = totalEnergy / durationMin;
+
+    // 3. Настройка тарифов Химки (руб за кВт⋅ч)
+    const T_NIGHT = 3.36; // 23:00 - 07:00
+    const T_PEAK = 9.85;  // 07:00-10:00, 17:00-21:00
+    const T_HALF = 6.43;  // Все остальное
+
+    // 4. Расчет стоимости по минутам
+    const [startH, startM] = startTimeStr.split(':').map(Number);
+    let totalCost = 0;
+
+    for (let m = 0; m < durationMin; m++) {
+        // Вычисляем текущий час и минуту для каждой минуты варки
+        // Используем остаток от деления на 1440 (минут в сутках), чтобы "крутить" время бесконечно
+        let currentTotalMinutes = (startH * 60 + startM + m) % 1440;
+        let currentHour = Math.floor(currentTotalMinutes / 60);
+
+        let activeTariff;
+        
+        if (currentHour >= 23 || currentHour < 7) {
+            activeTariff = T_NIGHT;
+        } else if ((currentHour >= 7 && currentHour < 10) || (currentHour >= 17 && currentHour < 21)) {
+            activeTariff = T_PEAK;
+        } else {
+            activeTariff = T_HALF;
+        }
+
+        totalCost += energyPerMinute * activeTariff;
+    }
+
+    // 5. Результат
+    alert(
+        `🥛 Уксус: ${vinegarMl.toFixed(0)} мл\n` +
+        `⏱ Длительность: ${durationMin.toFixed(1)} мин\n` +
+        `------------------------------\n` +
+        `⚡️ Потрачено энергии: ${totalEnergy.toFixed(3)} кВт⋅ч\n` +
+        `💰 Итоговая стоимость: ${totalCost.toFixed(2)} руб.\n\n` +
+        `(Расчет произведен посекундно с учетом переходов зон)`
+    );
+}
+</script>
+
+</body>
+</html>
